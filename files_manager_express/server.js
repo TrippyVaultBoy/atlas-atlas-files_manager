@@ -3,6 +3,9 @@ const routes = require('./routes/index.js');
 require('dotenv').config();
 
 const server = express();
+
+server.use(express.json());
+
 const port = process.env.PORT || 5000;
 
 server.use('/', routes);
