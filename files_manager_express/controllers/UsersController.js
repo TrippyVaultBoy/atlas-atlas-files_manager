@@ -1,9 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
-const dbClient = require('../utils/db.js');
+const {dbClient, ObjectId} = require('../utils/db.js');
 const redisClient = require('../utils/redis.js');
-const { ObjectId } = require('mongodb');
-
 
 const UsersController = {
     async postNew(req, res) {
