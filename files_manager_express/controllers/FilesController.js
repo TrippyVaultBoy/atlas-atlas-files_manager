@@ -86,7 +86,78 @@ const FilesController = {
                 parentId,
             });
         }
-    }    
+    },
+    
+    async getShow(req, res) {
+        const token = req.headers['x-token'];
+        if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+        const key = `auth_${token}`;
+
+        const userId = await redisClient.get(key);
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+        let fileId;
+        try {
+            fileId = new ObjectId(req.params.id);
+        } catch (err) {
+            return res.status(404).json({ error: 'Not found' });
+        }
+        
+        const file = await dbClient.db.collection('files').findOne({
+            _id: fileId,
+            userId: new ObjectId(userId),
+        });
+
+        if (!file) return res.status(404).json({ error: 'Not found' });
+
+        return res.status(200).json({
+            id: fileId,
+            userId: file.userId,
+            name: file.name,
+            type: file.type,
+            isPublic: file.isPublic,
+            parentId: file.parentId,
+        });
+    },
+
+    async getIndex(req, res) {
+        const token = req.headers['x-token'];
+        if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+        const key = `auth_${token}`;
+        const userId = await redisClient.get(key);
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+        const parentId = req.query.parentId || '0';
+        const page = parseInt(req.query.page, 10) || 0;
+
+        const match = {
+            userId: new ObjectId(userId),
+            parentId: parentId === '0' ? 0 : new ObjectId(parentId),
+        };
+
+        const files = await dbClient.db.collection('files')
+            .aggregate([
+            { $match: match },
+            { $skip: page * 20 },
+            { $limit: 20 },
+            {
+                $project: {
+                _id: 0,
+                id: '$_id',
+                userId: 1,
+                name: 1,
+                type: 1,
+                isPublic: 1,
+                parentId: 1,
+                },
+            },
+            ])
+            .toArray();
+
+        return res.status(200).json(files);
+    }
 };
 
 module.exports = FilesController;
